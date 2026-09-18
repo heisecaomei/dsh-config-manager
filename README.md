@@ -123,6 +123,31 @@ Select ZIP → validate file → check integrity → check schema → compatibil
 
 ---
 
+### Installing from Git (this fork)
+
+This fork **deliberately commits the build output `lib/`** (upstream gitignores it and has no
+`prepare` script, which is why the upstream repo cannot be installed straight from git). So you can
+install directly from this repository — **the target machine needs no Node / npm / build toolchain**:
+
+```bash
+# latest on the default branch
+dsh plugin --profile web add github:heisecaomei/dsh-config-manager
+
+# pin a tag / branch (recommended for reproducible installs)
+dsh plugin --profile web add github:heisecaomei/dsh-config-manager#v0.1.61
+```
+
+> 🌐 **Cannot reach github.com?** Prefix with the gh-proxy mirror (works for git deps too):
+> ```bash
+> dsh plugin --profile web add https://gh-proxy.com/https://github.com/heisecaomei/dsh-config-manager.git
+> ```
+>
+> 📦 **Offline**: `npm run build && npm pack` produces `dsh-config-manager-<version>.tgz`; copy it over
+> and run `dsh plugin --profile web add <path>\dsh-config-manager-<version>.tgz`.
+>
+> ⚠️ **After changing source you must `npm run build` and commit the new `lib/`**, otherwise a git
+> install on the target machine still picks up the old build output.
+
 ## 📥 Installation
 
 It's a standard **DSH plugin** — two steps:

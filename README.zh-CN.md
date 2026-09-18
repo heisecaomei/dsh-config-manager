@@ -124,6 +124,30 @@ DSH 是你的 AI 助手工作台，里面存着你的各种设置：模型配置
 
 ---
 
+### 从 Git 仓库安装（本 fork 专用）
+
+本 fork **刻意把构建产物 `lib/` 提交进了仓库**（上游默认 gitignore 它，且没有 `prepare` 脚本，
+因此上游仓库无法用 git 直接安装）。所以可以直接从本仓库安装，**对端机器不需要 Node / npm /
+构建工具链**：
+
+```bash
+# 默认分支最新版
+dsh plugin --profile web add github:heisecaomei/dsh-config-manager
+
+# 指定 tag / 分支（推荐用于固定版本）
+dsh plugin --profile web add github:heisecaomei/dsh-config-manager#v0.1.61
+```
+
+> 🌐 **访问不了 github.com？** 用 gh-proxy 镜像前缀（git 依赖同样适用）：
+> ```bash
+> dsh plugin --profile web add https://gh-proxy.com/https://github.com/heisecaomei/dsh-config-manager.git
+> ```
+>
+> 📦 **离线场景**：`npm run build && npm pack` 产出 `dsh-config-manager-<版本>.tgz`，
+> 拷到对端后 `dsh plugin --profile web add <路径>\dsh-config-manager-<版本>.tgz`。
+>
+> ⚠️ **改源码后必须 `npm run build` 并把新 `lib/` 一起提交**，否则对端 git 安装拿到的仍是旧构建产物。
+
 ## 📥 安装
 
 本插件是标准的 **DSH 插件**，安装只需要两步：

@@ -2,7 +2,11 @@
 node_modules/
 
 # Build output
-lib/
+# 注意：lib/ 在本 fork 中**刻意提交进仓库** —— B 机等无法直连本机的场景需要
+# `dsh plugin add github:heisecaomei/dsh-config-manager` 直接装到可运行的插件；
+# 上游 .gitignore 排除 lib/ 且无 prepare 脚本，git 安装会拿到没有 lib/index.js 的空壳。
+# 只排除 sourcemap（体积 3.3MB，且 package.json 的 files 已把 *.map 排除出发行包）。
+lib/**/*.map
 dist/
 *.tsbuildinfo
 

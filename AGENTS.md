@@ -201,7 +201,12 @@ UI 自查：DESIGN.md 一致(token/组件/spacing/radius/状态语义)、响应�
 - **pnpm 发布年龄**：`@latest` 装旧版是 pnpm 11 `minimumReleaseAge`（<30天被排除）；解决：精确版本装一次白名单，或 `pnpm-workspace.yaml` 设 `minimumReleaseAge: 0`。
 - **MemFs 测试**：内存 fs key 与宿主 path 解耦（win32 home 注入 cwd）。
 - **Windows LF→CRLF 警告**：无害噪音。
-- 根目录勿提交：`lib/dist/node_modules/outputs/my-video/.vibeskills/.agent-teams` 均已 gitignore。
+- 根目录勿提交：`dist/node_modules/outputs/my-video/.vibeskills/.agent-teams` 均已 gitignore。
+  **本 fork 的唯一偏离：`lib/` 刻意提交进仓库**（只忽略 `lib/**/*.map`）。原因：需要支持
+  `dsh plugin add github:heisecaomei/dsh-config-manager` 这类纯 git 安装（对端机器在别的网段、
+  无法直连本机传 tarball），而上游排除 `lib/` 又没有 `prepare` 脚本，git 安装会装到没有
+  `lib/index.js` 的空壳。**改源码后必须 `npm run build` 并把新 `lib/` 一起提交**，否则对端
+  拿到的是旧构建产物。`dist/` 仍不提交（tarball 属临时产物）。
 - `dist/` 需先创建再 `npm pack --pack-destination ./dist`（fresh checkout 否则 ENOENT）。
 - **client bundle 是 cjs + `window.__ModuleLoader__.load`**（tsdown.config.ts），改 format/入口会破坏加载器；CSS Modules 只认 `.module.css`。
 - **`src/client/` 不 import node 模块**（`PathMappingForm` 因 `utils/paths.ts` 依赖 node:path 做了轻量等价实现，刻意为之）。
