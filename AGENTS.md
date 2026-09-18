@@ -69,6 +69,7 @@ CI 门禁：`.github/workflows/ci.yml` 对 `pull_request`→main 与 `push`→ma
 - `src/core/` 与 DSH 解耦：`ConfigAdapter`/`HostContext`+内存 mock；**新功能优先加 core，适配器/UI 薄壳**。
 - 13 adapter 见结构；`self`=插件自身配置（`$DSH_HOME/dsh-config-manager/` 下 `sync-*.json`/`market-config.json`/`ui-prefs.json` 白名单收，portable 默认包含；`dataDir` 在 `~/.dsh` 外不挂载）。
 - 同步：`SyncEngine`+`Git/WebDavTransport`+`AutoSyncScheduler`(事件驱动,远端新快照才拉/本地改动才推)+`sync-selection`；**autosync 与 sync-selection 按通道(git/webdav)独立**(schema v2，v1→git)，调度器双通道各自排期。
+- **选择性可移植分区（`ConfigAdapter.syncOptIn`，2026-09 新增）**：`workspaces` / `sessions` 既非 portable 也非「永不参与同步」——它们**只在用户于同步分区列表显式勾选时**才进入同步通道。判定唯一出口是 `SyncEngine.portableAdapters(extra?)`：`scope = this.sections ?? push 请求的 sections`，`portable` 恒可参与（scope 为空=全量，原行为不变），`syncOptIn===true` 必须命中 scope；其余 deviceSpecific/platformSpecific 永不参与。**默认模式（scope 为空）恒不含 opt-in 分区**——这是安全边界，勿改成「默认也带上」。host 侧 `syncSectionCatalog`（status 回填 UI）必须用同一口径过滤，且对 opt-in 项强置 `defaultIncluded:false`（否则会被快速导出默认勾上）；`/sync/selection` 校验集合同样取自该目录。新增 opt-in 分区只需在 adapter 上加 `readonly syncOptIn = true`，无需改引擎。
 - **import 一律带 `.ts` 后缀**(Deno-style，勿写无后缀)。
 - 设计决策看 `docs/design/`（上游依据，实现规格在下游）。
 - **对外契约看 `docs/spec/`**：与 `docs/design/` 性质不同——`design/` 是**上游设计依据**（写给本仓库），`spec/` 是**对外契约**（写给第三方实现者，应能在不读 `src/` 的前提下据此实现兼容的 exporter/importer）。含：`bundle-format-v1.md`（格式规格）、`bundle-manifest.schema.json`（机器可校验）、`compat-matrix.md`（DSH 兼容区间与升级风险）、`headless-consumption.md`（无 UI 栈消费引擎）、`known-gaps.md`（已知缺口登记）。**改格式行为必须同步 `spec/`，并重跑 `tests/conformance/`。**
@@ -210,4 +211,4 @@ UI 自查：DESIGN.md 一致(token/组件/spacing/radius/状态语义)、响应�
 - **journal step 的 `skipped` 只能表示「用户主动跳过」**：`warning`（非致命失败，§34.17）与 `failed` 都必须记 `attention`，否则事后审计会把「安装失败」读成「用户跳过了」（issue #35 实测）。
 
 ## ⛔ 技术限制（勿突破）
-凭据值无法回滚(DSH 不回读)、插件安装需重启、MCP 无管理 API(组合 patch 行导入)、localStorage UI 状态不迁移、Schema v1→v2 为占位(CURRENT=1)、历史会话默认不迁移、加密备份密码丢失无法解密。完整清单见 DEVELOPERS.md §「完整技术限制」。
+凭据值无法回滚(DSH 不回读)、插件安装需重启、MCP 无管理 API(组合 patch 行导入)、localStorage UI 状态不迁移、Schema v1→v2 为占位(CURRENT=1)、工作区与会话**默认不迁移**（属 `syncOptIn` 选择性同步分区，需用户显式勾选；且同步的只是工作区记录，工作区里的项目文件仍需另搬）、加密备份密码丢失无法解密。完整清单见 DEVELOPERS.md §「完整技术限制」。

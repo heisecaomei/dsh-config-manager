@@ -12,7 +12,8 @@ import {
   autosyncIntervalMs, channelTabModels, computeAutosyncCountdown, computeGithubLoginView, computeRemoteReady, computeSyncButtons, computeSyncStatus,
   defaultChannelSyncState, formatDateTime, formatIntervalDuration, formatLastSync, githubPollMessage, kindLabel, privateRepoHint,
   pullReportView, pushReportView, presetById, presetIdForUrl, readStoredChannel, recommendedSyncSections,
-  severityLabel, summarizePullChanges, syncSectionGroups, syncSectionOptions, WEBDAV_PRESETS, writeStoredChannel,
+  selectedOptInSections, severityLabel, summarizePullChanges, syncSectionGroups, syncSectionOptions,
+  WEBDAV_PRESETS, writeStoredChannel,
 } from './sync-view.ts'
 
 /* ---------------------------------------------------------------- 私有仓库提示 */
@@ -488,4 +489,49 @@ test('sync-view: defaultChannelSyncState 每通道独立缺省值', () => {
   const webdav = defaultChannelSyncState()
   webdav.syncMode = 'advanced'
   assert.equal(git.syncMode, 'default', '修改一个通道缺省不影响另一个')
+})
+
+/* ---------------------------------------------------------------- 选择性同步分区（syncOptIn） */
+
+/** host 目录：portable 分区 + 两个 syncOptIn 分区（workspaces / sessions）。 */
+const OPT_IN_CATALOG: SyncSectionInfo[] = [
+  { id: 'settings', displayName: 'Settings', portability: 'portable', defaultIncluded: true },
+  { id: 'workspaces', displayName: 'Workspaces', portability: 'platformSpecific', defaultIncluded: false, syncOptIn: true },
+  { id: 'sessions', displayName: 'Sessions', portability: 'deviceSpecific', defaultIncluded: false, syncOptIn: true },
+]
+
+test('sync-view: syncSectionOptions 透传 syncOptIn（缺省 false，向后兼容）', () => {
+  const opts = syncSectionOptions(OPT_IN_CATALOG)
+  assert.equal(opts.find((o) => o.id === 'settings')?.syncOptIn, false, '未标注 = 普通分区')
+  assert.equal(opts.find((o) => o.id === 'workspaces')?.syncOptIn, true)
+  assert.equal(opts.find((o) => o.id === 'sessions')?.syncOptIn, true)
+})
+
+test('sync-view: syncSectionGroups 把 workspaces / sessions 落到 workspace / optional 分组', () => {
+  const groups = syncSectionGroups(syncSectionOptions(OPT_IN_CATALOG))
+  const bucket = (id: string): string[] =>
+    groups.find((g) => g.group === id)?.items.map((i) => i.id) ?? []
+  assert.ok(bucket('workspace').includes('workspaces'), 'workspaces 落在 Workspace 分组')
+  assert.ok(bucket('optional').includes('sessions'), 'sessions 落在 Optional Data 分组')
+})
+
+test('sync-view: recommendedSyncSections 绝不推荐 opt-in 分区（默认模式不勾选）', () => {
+  const recommended = recommendedSyncSections(OPT_IN_CATALOG)
+  assert.deepEqual(recommended, ['settings'])
+  assert.ok(!recommended.includes('workspaces'))
+  assert.ok(!recommended.includes('sessions'))
+})
+
+test('sync-view: selectedOptInSections 只回报已勾选的 opt-in 分区', () => {
+  const opts = syncSectionOptions(OPT_IN_CATALOG)
+  assert.deepEqual(selectedOptInSections(opts, []), [], '未勾选 → 无风险提示')
+  assert.deepEqual(selectedOptInSections(opts, ['settings']), [], '只勾 portable → 无风险提示')
+  assert.deepEqual(
+    selectedOptInSections(opts, ['settings', 'workspaces']).map((o) => o.id),
+    ['workspaces'],
+  )
+  assert.deepEqual(
+    selectedOptInSections(opts, ['workspaces', 'sessions']).map((o) => o.id),
+    ['workspaces', 'sessions'],
+  )
 })

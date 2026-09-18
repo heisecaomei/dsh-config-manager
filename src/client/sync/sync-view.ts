@@ -43,6 +43,8 @@ export interface SyncSectionOption {
   portability: 'portable' | 'deviceSpecific' | 'platformSpecific';
   /** 是否为推荐分区（defaultIncluded=true；默认模式全选、高级模式初始勾选） */
   defaultIncluded: boolean;
+  /** 选择性可同步分区（workspaces / sessions）：默认不参与同步，需用户显式勾选 */
+  syncOptIn: boolean;
 }
 
 /** host 目录（SyncSectionInfo[]）→ UI 勾选项（保留 id 顺序）。
@@ -59,6 +61,7 @@ export function syncSectionOptions(info: readonly SyncSectionInfo[]): SyncSectio
       group: cat?.group ?? 'general',
       portability: s.portability,
       defaultIncluded: s.defaultIncluded,
+      syncOptIn: s.syncOptIn === true,
     };
   });
 }
@@ -84,6 +87,19 @@ export function syncSectionGroups(options: readonly SyncSectionOption[]): {
 /** 默认（快速导出）模式的推荐同步分区：可移植且默认包含（与 ExportFlow.quickSelection 同口径）。 */
 export function recommendedSyncSections(info: readonly SyncSectionInfo[]): SectionId[] {
   return info.filter((s) => s.portability === 'portable' && s.defaultIncluded).map((s) => s.id);
+}
+
+/**
+ * 用户已勾选的「选择性可同步」分区（workspaces / sessions）。
+ * 这些分区默认不参与同步，勾选后会把工作区绝对路径 / 会话内容写入远端快照，
+ * UI 据此展示风险提示横幅（空数组 = 无需提示）。
+ */
+export function selectedOptInSections(
+  options: readonly SyncSectionOption[],
+  sections: readonly SectionId[],
+): SyncSectionOption[] {
+  const chosen = new Set(sections);
+  return options.filter((o) => o.syncOptIn && chosen.has(o.id));
 }
 
 /* ---------------------------------------------------------------- 变更摘要 */

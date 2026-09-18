@@ -76,7 +76,7 @@ Browse the built-in official market for ready-made configurations (model provide
 | 🔒 | **Secret safety** | API Keys are not exported by default — non-encrypted imports ask you to re-enter; encrypted backups restore them with the password |
 | ↩️ | **Automatic rollback** | Failed import restores everything automatically |
 | 📸 | **Snapshot restore** | Undo an import: whole-file restore + uninstall added plugins (CLI & GUI) |
-| 🔄 | **Remote Sync** | Push/pull portable config via **Git private repo or WebDAV** (secrets never sync) |
+| 🔄 | **Remote Sync** | Push/pull portable config via **Git private repo or WebDAV** (secrets never sync); **Workspaces / Sessions are opt-in syncable** (off by default, one tick to enable) |
 | ⏰ | **Scheduled backups** | Full backup on a fixed cadence (6h / 12h / 24h / 7d) — set-and-forget, secrets never included |
 | 🛒 | **Config Marketplace** | Browse & one-click install community configs — supply-chain warnings + per-section approval |
 | 🗂️ | **Profiles** | Save multiple setups (Work / Personal) and switch anytime — preview + auto-backup + rollback |
@@ -248,6 +248,23 @@ Push / pull your portable config between machines through **either of two channe
 - **WebDAV auth** uses HTTP Basic: the `username` is stored in the config and may be echoed back into the UI, while the `password` is read live from the DSH credentials slot `DSH_CONFIG_MANAGER_SYNC_WEBDAV_PASSWORD` — it never appears in any sync file or log.
 - **Plugins auto-install**: when pulling diffs, plugins that are new in the backup are **installed automatically** on confirm — no manual per-item ticking in the diff list. Only **version-conflict** plugins still ask you to pick "Keep Current / Use Imported".
 - **Push preview before uploading** — the Push button first shows a read-only preview of what will be sent (sections + per-section counts + changed-vs-baseline markers, first-baseline notice) and only writes the remote after you confirm.
+
+#### 🗂️ Opt-in sync: Workspaces & Sessions
+
+Beyond the portable sections, the **Remote Sync → Advanced (Custom Export) → Sync Sections** list
+now also offers two blocks of user data that are **off by default and freely tickable** — once ticked
+they travel over **WebDAV / Git** like any other section:
+
+| Section | What is synced | Default |
+|:---:|---|:---:|
+| **Workspaces** | workspace **id / title / absolute path / session id list** (the workspace records in `storages/workspace.json`) | 🔒 off |
+| **Sessions** | the **history session files themselves** (`~/.dsh/sessions/`, file-level copy) | 🔒 off |
+
+- **Nothing leaks by default**: while unticked these sections **never enter a sync snapshot** — the default mode (Quick Export / default auto sync) excludes them too, so workspace absolute paths and session content are never pushed to the remote behind your back.
+- **One tick is enough**: Git and WebDAV remember their own selection; the auto-sync scheduler reuses the same selection, so it keeps applying.
+- **Workspaces move records, not project files**: only the workspace registration (path + title + session ids) is synced; **the project files inside the workspace directory still need a separate transfer** (Git / file-sync tool).
+- **Path remapping on the other machine**: workspace paths are absolute — the importer will ask you to remap them (batch prefix replacement supported).
+- **⚠️ Security note**: session content holds full conversations (possibly secrets or private data) and workspace paths expose your local directory layout. Use a **trusted private** repository / WebDAV only; a persistent warning banner is shown once you tick them.
 
 ### 🛒 Configuration Marketplace
 
@@ -498,7 +515,7 @@ Yes. The import wizard asks for the export-time encryption password and verifies
 1. **Installing / updating plugins or MCP takes effect after restarting DSH**
 2. **Some UI state is not migrated** (e.g. task board data, panel widths — they live in the browser, not in DSH's config files)
 3. **keybindings / workflow configs / commands** — DSH has no such concepts, so nothing is exported for them. Global agent rules are covered by **Agent Instructions** (`~/.dsh/AGENTS.md`, injected into every session); per-project `AGENTS.md`/`CLAUDE.md` belong to each project's repo and are not migrated
-4. **History/session migration is off by default** (v1 copies files only)
+4. **Workspaces and Sessions are not migrated by default (opt-in sync)**: both are opt-in sections — you must explicitly tick them under "Remote Sync → Advanced → Sync Sections" before they travel over WebDAV / Git (file-level copy). Default export and default auto sync never include them
 5. **Encrypted backups**: a lost password means the `secrets.enc` can't be decrypted (by design — keep your password safe)
 6. **Snapshot restore is offline and honest**: entries the offline engine can't restore (settings namespaces / patch lines when the snapshot has no whole-file backup, workspace records stored in DSH storages) are reported as skipped with a pointer to online rollback; credential **values** are never auto-written (manual re-entry hint only); old snapshots without a plugin baseline only get a hint to remove added plugins manually
 

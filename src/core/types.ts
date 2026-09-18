@@ -484,6 +484,22 @@ export interface ConfigAdapter<TSection = unknown> {
   readonly displayName: string;
   readonly defaultIncluded: boolean;
   readonly portability: Portability;
+  /**
+   * 选择性可移植分区（缺省 false）。
+   *
+   * 有些分区既不是完全 portable，也不该被永久拒于同步通道之外：工作区记录（workspaces）
+   * 带绝对路径、会话（sessions）体积大且含敏感内容 —— 它们必须由**用户显式勾选**才允许
+   * 进入 WebDAV / Git 同步，而不是被无条件排除（用户需求：换机搬工作区与会话）。
+   *
+   * 语义（由 SyncEngine 强制执行，见 `portableAdapters`）：
+   * - `portability==='portable'`：恒可参与同步（原行为不变）；
+   * - `syncOptIn===true`：**仅当 id 出现在生效的分区勾选列表里**才参与；默认模式
+   *   （sections 未注入）恒不纳入 —— 保证「快速导出 / 默认同步」行为与安全边界完全不变；
+   * - 其余（deviceSpecific / platformSpecific 且未声明 syncOptIn）：永不参与。
+   *
+   * 注意：本标记只影响**同步通道**，不改变导出目录的 portability 语义、排序与「可移植」徽章。
+   */
+  readonly syncOptIn?: boolean;
 
   /** 读取当前 DSH 该类别配置 → 导出数据（无秘密值） */
   export(ctx: HostContext, options: ExportOptions): Promise<ExportSection<TSection>>;

@@ -11,5 +11,10 @@ export class SessionsAdapter extends FileCollectionAdapter {
   readonly displayName = 'Sessions';
   readonly defaultIncluded = false;
   readonly portability = 'deviceSpecific' as const;
+  /**
+   * 选择性可移植（syncOptIn）：会话文件体积大且含敏感内容，默认模式绝不参与同步；
+   * 只有用户显式勾选「Sessions」时才随同步通道带走（文件级复制，含会话内容本身）。
+   */
+  readonly syncOptIn = true;
   readonly baseDir = 'sessions';
 }

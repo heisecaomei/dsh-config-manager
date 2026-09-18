@@ -180,7 +180,7 @@ export const name = 'config-manager'
 export const inject = ['settings', 'credentials']
 
 /** Plugin version, kept in sync with package.json ("version"). */
-const PLUGIN_VERSION = '0.1.60'
+const PLUGIN_VERSION = '0.1.61'
 
 /** Plugin own package name — excluded from its own exported plugins list. */
 const PLUGIN_NAME = 'dsh-config-manager'
@@ -1647,10 +1647,23 @@ function makeRoutes(deps: RoutesDeps): { routes: WebRoute[]; scheduler: AutoSync
 
   /** 已知 adapter id 集合（push 请求体 sections 校验用）。 */
   const knownSyncSectionIds = new Set(adapters.map((a) => a.id))
-  /** 可同步分区目录（status 回填 UI「高级/自定义导出」勾选列表；只含 portable，与 SyncEngine 一致）。 */
+  /** 可同步分区目录（status 回填 UI「高级/自定义导出」勾选列表）。
+   *  含两类：① portable 分区（恒可同步）；② syncOptIn 分区（workspaces / sessions）——
+   *  用户显式勾选后才进入同步通道。后者恒标 `defaultIncluded:false`（绝不被快速导出/
+   *  默认模式默认勾上）并带 `syncOptIn:true`，UI 据此渲染独立徽章与风险提示。
+   *  与 SyncEngine.portableAdapters 的判定口径保持一致。 */
   const syncSectionCatalog = adapters
-    .filter((a) => a.portability === 'portable')
-    .map((a) => ({ id: a.id, displayName: a.displayName, portability: a.portability, defaultIncluded: a.defaultIncluded }))
+    .filter((a) => a.portability === 'portable' || a.syncOptIn === true)
+    .map((a) => {
+      const optIn = a.syncOptIn === true
+      return {
+        id: a.id,
+        displayName: a.displayName,
+        portability: a.portability,
+        defaultIncluded: optIn ? false : a.defaultIncluded,
+        syncOptIn: optIn,
+      }
+    })
 
   const makeImporter = (): Importer => new Importer({
     ctx: host,
@@ -4072,13 +4085,14 @@ function makeRoutes(deps: RoutesDeps): { routes: WebRoute[]; scheduler: AutoSync
           const channel: SyncTransportType = body['transport'] === 'webdav' ? 'webdav' : 'git'
           const mode: SyncSelectionMode = body['mode'] === 'advanced' ? 'advanced' : 'default'
           const rawSections = Array.isArray(body['sections']) ? body['sections'] : []
-          const portableIds = new Set(syncSectionCatalog.map((s) => s.id))
+          // 可勾选集合 = 同步分区目录（portable + syncOptIn）；不可同步分区仍在此被拒
+          const syncableIds = new Set(syncSectionCatalog.map((s) => s.id))
           for (const s of rawSections) {
             if (typeof s !== 'string' || s === '') {
               writeJson(res, 400, { error: 'sections must be an array of non-empty strings' })
               return
             }
-            if (!portableIds.has(s as SectionId)) {
+            if (!syncableIds.has(s as SectionId)) {
               writeJson(res, 400, { error: `unknown sync section: ${s}` })
               return
             }

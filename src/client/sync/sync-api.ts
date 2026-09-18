@@ -138,7 +138,10 @@ export interface SyncSectionInfo {
   /** 展示名（host adapter displayName） */
   displayName: string;
   portability: 'portable' | 'deviceSpecific' | 'platformSpecific';
+  /** 是否为推荐分区（host 对 syncOptIn 分区恒置 false，避免被默认模式勾上） */
   defaultIncluded: boolean;
+  /** 选择性可同步分区（workspaces / sessions）：默认不同步，需用户显式勾选才进入同步通道 */
+  syncOptIn?: boolean;
 }
 
 /** push 请求体（token 可选：非空则 Host 先写入 DSH credentials 再使用）。

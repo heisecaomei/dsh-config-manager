@@ -266,24 +266,38 @@ export class SyncEngine {
     this.sections = opts.sections !== undefined && opts.sections.length > 0 ? [...opts.sections] : undefined;
   }
 
-  /** 同步只做 portable 分区（deviceSpecific/platformSpecific 永不参与）。
-   *  构造注入 sections（同步范围）时再按注入范围过滤 —— 自动同步等后台流程
-   *  merge/apply/push 全链路复用用户选择；手动请求仍可用 push(opts.sections) 覆盖。 */
-  private portableAdapters(): ConfigAdapter[] {
-    const portable = this.adapters.filter((a) => a.portability === 'portable');
-    if (this.sections === undefined) return portable;
-    const wanted = new Set(this.sections);
-    return portable.filter((a) => wanted.has(a.id));
+  /**
+   * 同步通道候选 adapter（方法名沿用历史 `portableAdapters`；实际范围 =
+   * portable 分区 + **已显式勾选**的 syncOptIn 分区）。
+   *
+   * 规则（`extra` = push 请求临时携带的 sections，通常与构造注入的 this.sections 一致）：
+   * - 生效作用域 scope = 构造注入 sections 优先，其次 push 请求 sections，都为空 → undefined；
+   * - portable 分区：scope 为 undefined 时全部纳入，否则只取命中的（**原行为逐字节不变**）；
+   * - syncOptIn 分区（workspaces / sessions）：**scope 必须显式包含该 id** 才纳入。
+   *   默认模式（scope === undefined）恒不纳入 —— 工作区绝对路径与会话内容绝不因
+   *   「快速导出 / 默认自动同步」而悄悄上远端（保持既有安全边界）；
+   * - 其余 deviceSpecific / platformSpecific 分区永不参与。
+   *
+   * 自动同步等后台流程经构造注入的 sections 走同一判定，merge/apply/pull/push 全链路一致。
+   */
+  private portableAdapters(extra?: readonly SectionId[]): ConfigAdapter[] {
+    const scope = this.sections ?? (extra !== undefined && extra.length > 0 ? extra : undefined);
+    const wanted = scope === undefined ? undefined : new Set(scope);
+    return this.adapters.filter((a) => {
+      if (a.portability === 'portable') return wanted === undefined || wanted.has(a.id);
+      return a.syncOptIn === true && wanted !== undefined && wanted.has(a.id);
+    });
   }
 
   /**
    * push 候选 adapter：
-   * - sections 缺省/空 → 全部 portable（「默认/快速导出」模式）；
-   * - sections 显式给出 → 只取 portable 且命中的（「高级/自定义导出」模式）；
-   *   非 portable / 未知分区 → 警告跳过（安全约束 + 不静默，用户能看见自己勾了哪个无效项）。
+   * - sections 缺省/空 → 全部默认可同步分区（portable；默认模式**不含** opt-in 分区）；
+   * - sections 显式给出 → 只取命中且可同步的（「高级/自定义导出」模式）；
+   *   不可同步（deviceSpecific/platformSpecific 且未声明 syncOptIn）/ 未知分区 →
+   *   警告跳过（安全约束 + 不静默，用户能看见自己勾了哪个无效项）。
    */
   private pushTargets(sections: readonly SectionId[] | undefined, warnings: string[]): ConfigAdapter[] {
-    const portable = this.portableAdapters();
+    const portable = this.portableAdapters(sections);
     if (sections === undefined || sections.length === 0) return portable;
     const byId = new Map(portable.map((a) => [a.id, a]));
     const out: ConfigAdapter[] = [];

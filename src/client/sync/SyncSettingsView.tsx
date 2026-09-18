@@ -51,7 +51,7 @@ import {
   computeGithubLoginView, computeRemoteReady, computeSyncButtons,
   defaultChannelSyncState, formatIntervalDuration, githubPollMessage, kindLabel, presetById,
   presetIdForUrl, privateRepoHint, pullReportView, pushPreviewView, pushReportView, readStoredChannel,
-  recommendedSyncSections, severityLabel, syncSectionGroups, syncSectionOptions,
+  recommendedSyncSections, selectedOptInSections, severityLabel, syncSectionGroups, syncSectionOptions,
   WEBDAV_PRESETS, writeStoredChannel,
 } from './sync-view.ts'
 import type {
@@ -1229,7 +1229,9 @@ export function SyncSettingsView({ api, t }: SyncSettingsViewProps) {
                                 <span className={css.categoryItem}>
                                   <span className={css.categoryName}>{s.label}</span>
                                   <span className={css.categoryDesc}>{s.description}</span>
-                                  <Badge kind="info">{t('mode.sectionPortable')}</Badge>
+                                  {s.syncOptIn
+                                    ? <Badge kind="warn">{t('mode.sectionOptIn')}</Badge>
+                                    : <Badge kind="info">{t('mode.sectionPortable')}</Badge>}
                                   {s.defaultIncluded && <Badge kind="ok">{t('mode.sectionRecommended')}</Badge>}
                                 </span>
                               }
@@ -1240,7 +1242,19 @@ export function SyncSettingsView({ api, t }: SyncSettingsViewProps) {
                     ))}
                   </div>
                 )}
+                {state.catalog.some((s) => s.syncOptIn) && (
+                  <span className={css.hint}>{t('mode.optInHint')}</span>
+                )}
                 <span className={css.hint}>{t('mode.sectionsHint')}</span>
+                {selectedOptInSections(state.catalog, chState.syncSections).length > 0 && (
+                  <Banner kind="warn">
+                    {t('mode.optInWarn', {
+                      names: selectedOptInSections(state.catalog, chState.syncSections)
+                        .map((s) => s.label)
+                        .join('、'),
+                    })}
+                  </Banner>
+                )}
                 {chState.syncSections.length === 0 && <Banner kind="warn">{t('mode.atLeastOne')}</Banner>}
               </>
             )}

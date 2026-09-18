@@ -9,6 +9,34 @@ This file records release highlights of dsh-config-manager (bilingual: 中文 + 
 > **Release workflow**: on tag push, CI extracts the current version's section as the release notes highlights;
 > the build fails fast if the section is missing, so you cannot forget to update it.
 
+## [0.1.61] - 2026-09-18
+
+### 🗂️ 选择性同步：工作区与会话（新功能）
+
+- **新概念「选择性可移植分区」（`ConfigAdapter.syncOptIn`）**：`workspaces` 与 `sessions` 从
+  「永不参与远程同步」变为**用户显式勾选即可同步**。判定出口唯一 —— `SyncEngine.portableAdapters`：
+  `portable` 分区行为逐字节不变；`syncOptIn` 分区**只有出现在生效的分区勾选列表里**才纳入；
+  其余 deviceSpecific / platformSpecific 分区永不参与。
+- **安全边界不变**：默认模式（快速导出 / 默认自动同步，作用域为空）**恒不含**这两块分区 ——
+  工作区绝对路径与会话内容绝不会因为「默认同步」被悄悄推上远端（有回归测试锁死）。
+- **同步选项卡新增可勾选项**：高级（自定义导出）→ 同步分区列表里出现 **Workspaces**（Workspace 分组）
+  与 **Sessions**（Optional Data 分组），带「选择性同步」徽章、常驻说明与**勾选后的风险横幅**；
+  勾选状态按通道（git / webdav）独立持久化，自动同步复用同一份选择。
+- **工作区同步内容**：id / 标题 / 绝对路径 / 会话 id 列表（`storages/workspace.json` 记录）；
+  **不含**工作区目录里的项目文件（仍需另行搬运）。换机导入时照常走路径映射。
+- **会话同步内容**：`~/.dsh/sessions/` 下的会话文件本体（文件级复制）。
+- **i18n**：新增 `mode.sectionOptIn` / `mode.optInHint` / `mode.optInWarn` 三键（zh 源 + en 镜像），
+  并改写 `mode.sectionsHint` / `mode.advancedHint`（原文案称「工作区与会话永不参与同步」已不成立）。
+
+### 🧪 测试与文档
+
+- 新增 `src/sync/sync-opt-in.test.ts`（6 例）：默认模式不含 opt-in、勾选后字段/会话内容完整、
+  只勾 portable 时不搭便车、push 请求携带 sections 亦可启用、不可同步分区仍被拒绝并告警。
+- `src/client/sync/sync-view.test.ts` 新增 4 例：`syncOptIn` 透传、分组落位、
+  `recommendedSyncSections` 绝不推荐 opt-in、`selectedOptInSections` 只回报已勾选项。
+- `README.md` / `README.zh-CN.md` 新增「选择性同步：工作区与会话」小节 + 功能表行 + 已知限制改写；
+  `AGENTS.md` 补该架构约定与修订后的技术限制。
+
 ## [0.1.60] - 2026-09-18
 
 > 本版包含**两块互不重叠**的工作：

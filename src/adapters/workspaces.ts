@@ -18,6 +18,12 @@ export class WorkspacesAdapter implements ConfigAdapter<WorkspacesSection> {
   readonly displayName = 'Workspaces';
   readonly defaultIncluded = true;
   readonly portability = 'platformSpecific' as const;
+  /**
+   * 选择性可移植（syncOptIn）：工作区记录含**绝对路径**，且目标机路径通常不同，
+   * 因此不参与默认同步；只有用户在「远程同步 → 高级 → 分区勾选」里显式勾选
+   * 「Workspaces」时，才随同步通道带走 id / 标题 / 绝对路径 / 会话 id 列表。
+   */
+  readonly syncOptIn = true;
 
   async export(ctx: HostContext, _options: ExportOptions): Promise<ExportSection<WorkspacesSection>> {
     const records = await ctx.workspace.listRecords();
